@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Congés">
+<meta name="theme-color" content="#ffffff">
+<title>Suivi Congés</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; }
+
+  /* Header */
+  .header { background: #fff; padding: env(safe-area-inset-top, 0) 16px 0; border-bottom: 0.5px solid #c6c6c8; position: sticky; top: 0; z-index: 50; }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; height: 52px; }
+  .header h1 { font-size: 17px; font-weight: 600; }
+  .month-nav { display: flex; align-items: center; gap: 8px; }
+  .nav-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f2f2f7; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #007aff; }
+  .month-label { font-size: 15px; font-weight: 500; min-width: 130px; text-align: center; }
+  .year-select { font-size: 14px; border: none; background: transparent; color: #007aff; font-weight: 500; }
+
+  /* Tabs */
+  .tabs { display: flex; background: #fff; border-bottom: 0.5px solid #c6c6c8; }
+  .tab { flex: 1; padding: 10px 0; text-align: center; font-size: 13px; font-weight: 500; color: #8e8e93; border-bottom: 2px solid transparent; cursor: pointer; }
+  .tab.active { color: #007aff; border-bottom-color: #007aff; }
+
+  /* Sections */
+  .section { padding: 12px 16px; }
+  .section-title { font-size: 12px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+  /* Quota cards */
+  .quota-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .quota-card { background: #fff; border-radius: 12px; padding: 10px; }
+  .quota-emp { font-size: 12px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+  .quota-avatar { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; flex-shrink: 0; }
+  .bar-wrap { background: #f2f2f7; border-radius: 3px; height: 5px; margin-bottom: 5px; overflow: hidden; }
+  .bar-fill { height: 5px; border-radius: 3px; transition: width 0.3s; }
+  .quota-nums { font-size: 11px; color: #8e8e93; display: flex; justify-content: space-between; }
+  .quota-nums b { color: #1c1c1e; }
+  .badge { font-size: 10px; padding: 1px 5px; border-radius: 8px; font-weight: 500; }
+  .badge-ok { background: #d1f0e0; color: #1a7a45; }
+  .badge-warn { background: #fef3cd; color: #8a6400; }
+  .badge-full { background: #fde8e8; color: #c0392b; }
+
+  /* Balance */
+  .balance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .balance-card { background: #fff; border-radius: 12px; padding: 10px; }
+  .balance-name { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+  .balance-row { font-size: 11px; padding: 3px 0; border-top: 0.5px solid #f2f2f7; display: flex; flex-direction: column; gap: 1px; }
+  .balance-row span { color: #8e8e93; }
+  .balance-row b { font-size: 12px; }
+  .debt-neg { color: #c0392b; }
+  .debt-pos { color: #1a7a45; }
+  .debt-zero { color: #8e8e93; }
+
+  /* Calendar */
+  .calendar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; background: #fff; border-radius: 12px; }
+  .cal-table { border-collapse: collapse; min-width: 100%; }
+  .cal-table th { font-size: 10px; color: #8e8e93; font-weight: 400; padding: 4px 1px; text-align: center; border-bottom: 0.5px solid #f2f2f7; background: #fff; white-space: nowrap; }
+  .cal-table th.emp-col { text-align: left; padding-left: 10px; min-width: 100px; font-size: 12px; font-weight: 600; color: #1c1c1e; position: sticky; left: 0; z-index: 3; border-right: 0.5px solid #f2f2f7; background: #fff; }
+  .cal-table thead tr:first-child th { position: sticky; top: 0; z-index: 2; }
+  .cal-table thead tr:last-child th { position: sticky; top: 29px; z-index: 2; }
+  .cal-table tbody td { padding: 2px 1px; text-align: center; }
+  .cal-table tbody td.emp-col { text-align: left; padding: 5px 10px; font-size: 12px; font-weight: 500; border-right: 0.5px solid #f2f2f7; background: #fff; position: sticky; left: 0; z-index: 1; }
+  .cal-table tbody tr { border-bottom: 0.5px solid #f2f2f7; }
+
+  .cell { display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; margin: 0 auto; font-size: 8px; font-weight: 600; user-select: none; transition: opacity 0.1s; }
+  .cell-half { width: 18px; height: 26px; }
+  .cell-full { width: 26px; height: 26px; }
+  .cell:active { opacity: 0.6; }
+  .cell.normal { background: transparent; border: 0.5px solid #e5e5ea; }
+  .cell.conge { background: #cce5ff; color: #004085; border: none; }
+  .cell.remplacement { background: #c3f0dc; color: #0a5c35; border: none; }
+  .cell.remplace { background: #fde8c3; color: #7a4500; border: none; }
+
+  /* Legend */
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px 16px; background: #fff; border-radius: 12px; margin-bottom: 12px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #3a3a3c; cursor: pointer; padding: 5px 8px; border-radius: 8px; border: 1.5px solid transparent; }
+  .leg-item.active { border-color: #007aff; background: #f0f6ff; }
+  .leg-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .dot-c { background: #cce5ff; }
+  .dot-r { background: #c3f0dc; }
+
+  /* Modal */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 16px 16px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0)); width: 100%; max-height: 85vh; overflow-y: auto; }
+  .modal-handle { width: 36px; height: 4px; background: #c7c7cc; border-radius: 2px; margin: 0 auto 16px; }
+  .modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: #8e8e93; margin-bottom: 16px; }
+  .modal label { font-size: 13px; color: #8e8e93; display: block; margin-bottom: 4px; margin-top: 12px; }
+  .modal select { width: 100%; height: 44px; font-size: 16px; border: 1px solid #c6c6c8; border-radius: 10px; background: #f2f2f7; color: #1c1c1e; padding: 0 12px; appearance: none; }
+  .arrow-label { text-align: center; font-size: 13px; color: #8e8e93; margin: 8px 0; }
+  .preview { background: #f2f2f7; border-radius: 10px; padding: 10px 14px; margin-top: 12px; font-size: 13px; line-height: 1.6; color: #3a3a3c; }
+  .preview .green { color: #1a7a45; font-weight: 600; }
+  .preview .orange { color: #8a4500; font-weight: 600; }
+  .modal-btn { width: 100%; height: 50px; border-radius: 12px; border: none; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  .btn-apply { background: #007aff; color: #fff; }
+  .btn-cancel { background: #f2f2f7; color: #007aff; margin-top: 8px; }
+
+  /* Loading */
+  .loading { display: flex; align-items: center; justify-content: center; padding: 32px; gap: 10px; color: #8e8e93; font-size: 14px; }
+  .spinner { width: 20px; height: 20px; border: 2px solid #e5e5ea; border-top-color: #007aff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .today-col { background: #e8f0fe !important; }
+  .emp-name-wrap { display: flex; align-items: center; gap: 6px; }
+  .emp-av { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="month-nav">
+      <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+      <span class="month-label" id="monthLabel">Avril 2026</span>
+      <button class="nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <select class="year-select" id="yearSelect" onchange="changeYear(this.value)"><option value="2025">2025</option><option value="2026" selected="selected">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option></select>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('calendar', this)">Calendrier</div>
+  <div class="tab" onclick="showTab('quotas', this)">Quotas</div>
+  <div class="tab" onclick="showTab('balance', this)">Balance</div>
+</div>
+
+<div id="syncStatus" style="text-align:center;font-size:11px;color:#8e8e93;padding:4px;background:#fff;border-bottom:0.5px solid #f2f2f7;">Prêt</div>
+
+<!-- TAB: CALENDAR -->
+<div id="tab-calendar">
+  <div class="section">
+    <div class="legend" id="legend">
+      <div class="leg-item active" onclick="setMode('conge',this)"><span class="leg-dot dot-c"></span>Congé payé</div>
+      <div class="leg-item" onclick="setMode('remplacement',this)"><span class="leg-dot dot-r"></span>Remplacement</div>
+      <div class="leg-item" onclick="setMode('normal',this)" style="color:#8e8e93;font-size:11px">✕ Effacer</div>
+    </div>
+    <div class="calendar-wrap">
+      <table class="cal-table" id="calTable">
+        <thead id="calHead"><tr><th class="emp-col" rowspan="2">Employé</th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">1<br><span style="font-size:8px">Me</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">2<br><span style="font-size:8px">Je</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">3<br><span style="font-size:8px">Ve</span></th><th colspan="2" style="color:#c7c7cc;border-left:0.5px solid #f2f2f7">4<br><span style="font-size:8px">Sa</span></th><th colspan="1" style="color:#c7c7cc;border-left:0.5px solid #f2f2f7">5<br><span style="font-size:8px">Di</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">6<br><span style="font-size:8px">Lu</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">7<br><span style="font-size:8px">Ma</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">8<br><span style="font-size:8px">Me</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">9<br><span style="font-size:8px">Je</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">10<br><span style="font-size:8px">Ve</span></th><th colspan="2" style="color:#c7c7cc;border-left:0.5px solid #f2f2f7">11<br><span style="font-size:8px">Sa</span></th><th colspan="1" style="color:#c7c7cc;border-left:0.5px solid #f2f2f7">12<br><span style="font-size:8px">Di</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">13<br><span style="font-size:8px">Lu</span></th><th colspan="2" style="color:#007aff;font-weight:700;border-left:0.5px solid #f2f2f7">14<br><span style="font-size:8px">Ma</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">15<br><span style="font-size:8px">Me</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">16<br><span style="font-size:8px">Je</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">17<br><span style="font-size:8px">Ve</span></th><th colspan="2" style="color:#c7c7cc;border-left:0.5px solid #f2f2f7">18<br><span style="font-size:8px">Sa</span></th><th colspan="1" style="color:#c7c7cc;border-left:0.5px solid #f2f2f7">19<br><span style="font-size:8px">Di</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">20<br><span style="font-size:8px">Lu</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">21<br><span style="font-size:8px">Ma</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">22<br><span style="font-size:8px">Me</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">23<br><span style="font-size:8px">Je</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">24<br><span style="font-size:8px">Ve</span></th><th colspan="2" style="color:#c7c7cc;border-left:0.5px solid #f2f2f7">25<br><span style="font-size:8px">Sa</span></th><th colspan="1" style="color:#c7c7cc;border-left:0.5px solid #f2f2f7">26<br><span style="font-size:8px">Di</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">27<br><span style="font-size:8px">Lu</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">28<br><span style="font-size:8px">Ma</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">29<br><span style="font-size:8px">Me</span></th><th colspan="2" style=";border-left:0.5px solid #f2f2f7">30<br><span style="font-size:8px">Je</span></th></tr><tr><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">J</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">J</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">J</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">J</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th><th style="border-left:0.5px solid #f2f2f7;font-size:8px;color:#c7c7cc">M</th><th style="font-size:8px;color:#c7c7cc">AM</th></tr></thead>
+        <tbody id="calBody"><tr><td class="emp-col"><div class="emp-name-wrap"><div class="emp-av" style="background:#cce5ff;color:#004085">CA</div>Cassandra</div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,1,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,1,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,2,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,2,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,3,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,3,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,4,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,4,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(0,5,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,6,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,6,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,7,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,7,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,8,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,8,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,9,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,9,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,10,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,10,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,11,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,11,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(0,12,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,13,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,13,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,14,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,14,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,15,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,15,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,16,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,16,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,17,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,17,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,18,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,18,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(0,19,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,20,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,20,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,21,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,21,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,22,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,22,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,23,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,23,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,24,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,24,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,25,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,25,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(0,26,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,27,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,27,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,28,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,28,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,29,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,29,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(0,30,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(0,30,'AM')" title=""></div></td></tr><tr><td class="emp-col"><div class="emp-name-wrap"><div class="emp-av" style="background:#c3f0dc;color:#0a5c35">AM</div>Amélie</div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,1,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,1,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,2,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,2,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,3,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,3,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,4,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,4,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(1,5,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,6,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,6,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,7,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,7,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,8,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,8,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,9,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,9,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,10,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,10,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,11,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,11,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(1,12,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,13,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,13,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,14,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,14,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,15,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,15,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,16,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,16,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,17,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,17,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,18,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,18,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(1,19,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,20,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,20,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,21,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,21,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,22,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,22,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,23,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,23,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,24,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,24,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,25,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,25,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(1,26,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,27,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,27,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,28,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,28,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,29,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,29,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(1,30,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(1,30,'AM')" title=""></div></td></tr><tr><td class="emp-col"><div class="emp-name-wrap"><div class="emp-av" style="background:#fde8c3;color:#7a4500">PA</div>Pascal</div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,1,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,1,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,2,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,2,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,3,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,3,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,4,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,4,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(2,5,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,6,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,6,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,7,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,7,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,8,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,8,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,9,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,9,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,10,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,10,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,11,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,11,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(2,12,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,13,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,13,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,14,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,14,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,15,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,15,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,16,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,16,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,17,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,17,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,18,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,18,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(2,19,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,20,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,20,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,21,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,21,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,22,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,22,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,23,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,23,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,24,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,24,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,25,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,25,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-full normal" onclick="toggleSlot(2,26,'J')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,27,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,27,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,28,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,28,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,29,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,29,'AM')" title=""></div></td><td style="border-left:0.5px solid #f2f2f7;"><div class="cell cell-half normal" onclick="toggleSlot(2,30,'M')" title=""></div></td><td style=""><div class="cell cell-half normal" onclick="toggleSlot(2,30,'AM')" title=""></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: QUOTAS -->
+<div id="tab-quotas" style="display:none">
+  <div class="section">
+    <div class="section-title">Congés payés — <span id="yearLabelQ"></span></div>
+    <div class="quota-grid" id="quotaGrid"></div>
+  </div>
+</div>
+
+<!-- TAB: BALANCE -->
+<div id="tab-balance" style="display:none">
+  <div class="section">
+    <div class="section-title">Balance des remplacements</div>
+    <div class="balance-grid" id="balanceGrid"></div>
+  </div>
+</div>
+
+<!-- MODAL REMPLACEMENT -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Remplacement</h3>
+    <p class="modal-sub" id="modalSub"></p>
+    <label>Qui remplace</label>
+    <select id="selRemplacant" onchange="updatePreview()"></select>
+    <p class="arrow-label">↓ remplace ↓</p>
+    <select id="selRemplace" onchange="updatePreview()"></select>
+    <div class="preview" id="previewBox"></div>
+    <button class="modal-btn btn-apply" onclick="applyModal()">Confirmer</button>
+    <button class="modal-btn btn-cancel" onclick="closeModal()">Annuler</button>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw-yDPffAma6HWquOZN9Y4bHluUXT9gxBKzmqb49yvk-mSxrY67f93aDzJXJQZ_FT_4/exec";
+const MAX_DAYS = 20; // 5 semaines x 4 jours
+
+const employees = [
+  { id: 0, name: 'Cassandra', initials: 'CA', bg: '#cce5ff', fg: '#004085', bar: '#007aff' },
+  { id: 1, name: 'Amélie',    initials: 'AM', bg: '#c3f0dc', fg: '#0a5c35', bar: '#34c759' },
+  { id: 2, name: 'Pascal',    initials: 'PA', bg: '#fde8c3', fg: '#7a4500', bar: '#ff9500' }
+];
+
+const now = new Date();
+let currentYear = now.getFullYear();
+let currentMonth = now.getMonth();
+let currentMode = 'conge';
+let modalState = null;
+let data = {}; // clé → { type, other }
+let saveTimeout = null;
+let isSaving = false;
+
+const key = (e,y,m,d,s) => `${e}-${y}-${m}-${d}-${s}`;
+const slotsFor = dow => dow === 0 ? ['J'] : ['M','AM'];
+const slotVal = s => s === 'J' ? 1 : 0.5;
+
+// === SYNC ===
+async function loadData() {
+  setSyncStatus('Chargement…');
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=get`);
+    const json = await res.json();
+    if (json.ok) {
+      data = {};
+      Object.entries(json.data).forEach(([k, v]) => {
+        try { data[k] = JSON.parse(v); } catch { data[k] = v; }
+      });
+      setSyncStatus('Synchronisé ✓');
+    }
+  } catch(e) { setSyncStatus('Hors ligne — modifications locales'); }
+  render();
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => saveAllData(), 800);
+}
+
+async function saveAllData() {
+  setSyncStatus('Enregistrement…');
+  try {
+    const value = encodeURIComponent(JSON.stringify(data));
+    const res = await fetch(`${SCRIPT_URL}?action=set&key=allData&value=${value}`);
+    const json = await res.json();
+    setSyncStatus(json.ok ? 'Synchronisé ✓' : 'Erreur de sauvegarde');
+  } catch(e) { setSyncStatus('Hors ligne — modifications locales'); }
+}
+
+async function loadDataFast() {
+  setSyncStatus('Chargement…');
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=get`);
+    const json = await res.json();
+    if (json.ok && json.data.allData) {
+      try { data = JSON.parse(json.data.allData); } catch { data = {}; }
+      setSyncStatus('Synchronisé ✓');
+    } else {
+      setSyncStatus('Prêt');
+    }
+  } catch(e) { setSyncStatus('Hors ligne'); }
+  render();
+}
+
+function setSyncStatus(msg) {
+  document.getElementById('syncStatus').textContent = msg;
+}
+
+// === TABS ===
+function showTab(name, el) {
+  ['calendar','quotas','balance'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (name === 'quotas') { renderQuotas(); document.getElementById('yearLabelQ').textContent = currentYear; }
+  if (name === 'balance') renderBalance();
+}
+
+// === NAVIGATION ===
+function changeMonth(d) {
+  currentMonth += d;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  syncYearSelect(); renderCalendar();
+}
+function changeYear(y) { currentYear = parseInt(y); renderCalendar(); }
+function goToday() { currentMonth = now.getMonth(); currentYear = now.getFullYear(); syncYearSelect(); renderCalendar(); }
+function syncYearSelect() { const s = document.getElementById('yearSelect'); if(s) s.value = currentYear; }
+function daysInMonth(y,m) { return new Date(y,m+1,0).getDate(); }
+
+// === MODE ===
+function setMode(m, el) {
+  currentMode = m;
+  document.querySelectorAll('.leg-item').forEach(i => i.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+
+// === TOGGLE ===
+function toggleSlot(empId, day, slot) {
+  const k = key(empId, currentYear, currentMonth, day, slot);
+  if (currentMode === 'normal') {
+    const entry = data[k];
+    if (entry && entry.other != null && (entry.type === 'remplacement' || entry.type === 'remplace')) {
+      delete data[key(entry.other, currentYear, currentMonth, day, slot)];
+    }
+    delete data[k];
+    scheduleSave(); render(); return;
+  }
+  if (currentMode === 'conge') {
+    const alreadySet = data[k] && data[k].type === 'conge';
+    if (!alreadySet) {
+      const used = countDaysConge(empId, currentYear);
+      if (used + slotVal(slot) > MAX_DAYS) {
+        alert(`${employees[empId].name} a atteint son quota de 5 semaines (20 j) pour ${currentYear}.`);
+        return;
+      }
+    }
+    data[k] = { type: 'conge', other: null };
+    scheduleSave(); render(); return;
+  }
+  if (currentMode === 'remplacement') {
+    openModal(empId, day, slot);
+  }
+}
+
+// === MODAL ===
+function openModal(empId, day, slot) {
+  modalState = { empId, day, slot };
+  const d = new Date(currentYear, currentMonth, day);
+  document.getElementById('modalSub').textContent =
+    d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'}) + ' — ' + slot;
+
+  const sR = document.getElementById('selRemplacant');
+  const sE = document.getElementById('selRemplace');
+  sR.innerHTML = ''; sE.innerHTML = '';
+  employees.forEach(e => {
+    sR.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+    sE.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+  });
+
+  const existing = data[key(empId, currentYear, currentMonth, day, slot)];
+  if (existing && existing.type === 'remplacement') {
+    sR.value = empId; sE.value = existing.other ?? (empId === 0 ? 1 : 0);
+  } else if (existing && existing.type === 'remplace') {
+    sE.value = empId; sR.value = existing.other ?? (empId === 0 ? 1 : 0);
+  } else {
+    sR.value = empId; sE.value = empId === 0 ? 1 : 0;
+  }
+  updatePreview();
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function updatePreview() {
+  const rId = parseInt(document.getElementById('selRemplacant').value);
+  const eId = parseInt(document.getElementById('selRemplace').value);
+  const box = document.getElementById('previewBox');
+  if (rId === eId) { box.innerHTML = '<span style="color:#8e8e93">Sélectionnez deux employés différents.</span>'; return; }
+  const r = employees[rId], e = employees[eId];
+  box.innerHTML = `<span class="green">${r.name}</span> remplace <span class="orange">${e.name}</span><br>→ <span class="orange">${e.name}</span> devra rendre ce temps à <span class="green">${r.name}</span>`;
+}
+
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); modalState = null; }
+
+function applyModal() {
+  if (!modalState) return;
+  const { day, slot } = modalState;
+  const rId = parseInt(document.getElementById('selRemplacant').value);
+  const eId = parseInt(document.getElementById('selRemplace').value);
+  if (rId === eId) { alert('Sélectionnez deux employés différents.'); return; }
+  [rId, eId].forEach(id => delete data[key(id, currentYear, currentMonth, day, slot)]);
+  data[key(rId, currentYear, currentMonth, day, slot)] = { type: 'remplacement', other: eId };
+  data[key(eId, currentYear, currentMonth, day, slot)] = { type: 'remplace', other: rId };
+  closeModal();
+  scheduleSave(); render();
+}
+
+document.getElementById('modalBg').addEventListener('click', e => { if(e.target === e.currentTarget) closeModal(); });
+
+// === COUNTS ===
+function countDaysConge(empId, year) {
+  let total = 0;
+  Object.entries(data).forEach(([k,v]) => {
+    if (!v || v.type !== 'conge') return;
+    const p = k.split('-');
+    if (parseInt(p[0]) !== empId) return;
+    if (new Date(parseInt(p[1]),parseInt(p[2]),parseInt(p[3])).getFullYear() !== year) return;
+    total += slotVal(p[4]);
+  });
+  return total;
+}
+
+function computeBalance() {
+  const owes = {};
+  employees.forEach(a => { owes[a.id] = {}; employees.forEach(b => { if(a.id!==b.id) owes[a.id][b.id]=0; }); });
+  Object.entries(data).forEach(([k,v]) => {
+    if (!v || v.type !== 'remplace' || v.other == null) return;
+    const p = k.split('-');
+    const empId = parseInt(p[0]);
+    owes[empId][v.other] = (owes[empId][v.other]||0) + slotVal(p[4]);
+  });
+  return owes;
+}
+
+function fmt(n) { const r = Math.round(n*10)/10; return r%1===0?r.toString():r.toFixed(1); }
+
+// === RENDER ===
+function render() {
+  renderCalendar();
+  // update other tabs if visible
+  if (!document.getElementById('tab-quotas').style.display || document.getElementById('tab-quotas').style.display === '') renderQuotas();
+  if (!document.getElementById('tab-balance').style.display || document.getElementById('tab-balance').style.display === '') renderBalance();
+}
+
+function renderCalendar() {
+  const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  document.getElementById('monthLabel').textContent = months[currentMonth] + ' ' + currentYear;
+
+  const sel = document.getElementById('yearSelect');
+  if (sel.options.length === 0) {
+    for (let y = now.getFullYear()-1; y <= now.getFullYear()+3; y++) {
+      const o = document.createElement('option'); o.value=y; o.text=y; sel.appendChild(o);
+    }
+  }
+  sel.value = currentYear;
+
+  const days = daysInMonth(currentYear, currentMonth);
+  const dn = ['Di','Lu','Ma','Me','Je','Ve','Sa'];
+  const cols = [];
+  for (let d=1; d<=days; d++) {
+    const dow = new Date(currentYear, currentMonth, d).getDay();
+    cols.push({ d, dow, slots: slotsFor(dow) });
+  }
+
+  let h1 = '<tr><th class="emp-col" rowspan="2">Employé</th>';
+  cols.forEach(({d,dow,slots}) => {
+    const isToday = currentYear===now.getFullYear()&&currentMonth===now.getMonth()&&d===now.getDate();
+    const we = dow===0||dow===6;
+    const col = isToday?'color:#007aff;font-weight:700':we?'color:#c7c7cc':'';
+    h1 += `<th colspan="${slots.length}" style="${col};border-left:0.5px solid #f2f2f7">${d}<br><span style="font-size:8px">${dn[dow]}</span></th>`;
+  });
+  h1 += '</tr><tr>';
+  cols.forEach(({slots}) => {
+    slots.forEach((s,si) => {
+      const bl = si===0?'border-left:0.5px solid #f2f2f7;':'';
+      h1 += `<th style="${bl}font-size:8px;color:#c7c7cc">${s}</th>`;
+    });
+  });
+  h1 += '</tr>';
+  document.getElementById('calHead').innerHTML = h1;
+
+  let body = '';
+  employees.forEach(emp => {
+    body += `<tr><td class="emp-col"><div class="emp-name-wrap"><div class="emp-av" style="background:${emp.bg};color:${emp.fg}">${emp.initials}</div>${emp.name}</div></td>`;
+    cols.forEach(({d,dow,slots}) => {
+      slots.forEach((slot,si) => {
+        const k = key(emp.id,currentYear,currentMonth,d,slot);
+        const entry = data[k];
+        const type = entry ? entry.type : 'normal';
+        const other = entry&&entry.other!=null ? employees[entry.other] : null;
+        let label = '';
+        if(type==='conge') label='C';
+        else if(type==='remplacement') label=other?other.initials[0]:'R';
+        else if(type==='remplace') label=other?other.initials[0]:'?';
+        const bl = si===0?'border-left:0.5px solid #f2f2f7;':'';
+        const isFull = slot==='J';
+        const cls = `cell ${isFull?'cell-full':'cell-half'} ${type}`;
+        const tt = type==='remplacement'&&other?`Remplace ${other.name}`:type==='remplace'&&other?`Remplacé par ${other.name}`:'';
+        body += `<td style="${bl}"><div class="${cls}" onclick="toggleSlot(${emp.id},${d},'${slot}')" title="${tt}">${label}</div></td>`;
+      });
+    });
+    body += '</tr>';
+  });
+  document.getElementById('calBody').innerHTML = body;
+}
+
+function renderQuotas() {
+  document.getElementById('yearLabelQ').textContent = currentYear;
+  let html = '';
+  employees.forEach(emp => {
+    const used = countDaysConge(emp.id, currentYear);
+    const usedW = used/4;
+    const rem = MAX_DAYS - used;
+    const remW = rem/4;
+    const pct = Math.min(100, used/MAX_DAYS*100);
+    const bc = rem<=0?'badge-full':remW<=1?'badge-warn':'badge-ok';
+    const bt = rem<=0?'Épuisé':`${fmt(remW)} sem. rest.`;
+    html += `<div class="quota-card">
+      <div class="quota-emp"><div class="quota-avatar" style="background:${emp.bg};color:${emp.fg}">${emp.initials}</div>${emp.name}</div>
+      <div style="margin-bottom:4px"><span class="badge ${bc}">${bt}</span></div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${emp.bar}"></div></div>
+      <div class="quota-nums"><span><b>${fmt(usedW)}</b> sem.</span><span>${fmt(used)}/${MAX_DAYS}j</span></div>
+    </div>`;
+  });
+  document.getElementById('quotaGrid').innerHTML = html;
+}
+
+function renderBalance() {
+  const owes = computeBalance();
+  let html = '';
+  employees.forEach(emp => {
+    let rows = '';
+    let any = false;
+    employees.filter(o=>o.id!==emp.id).forEach(other => {
+      const eO = owes[emp.id][other.id]||0;
+      const oE = owes[other.id][emp.id]||0;
+      const net = eO - oE;
+      if(eO>0||oE>0) {
+        any=true;
+        const cls = net>0?'debt-neg':net<0?'debt-pos':'debt-zero';
+        const txt = net>0?`Doit ${fmt(net)}j à ${other.name}`:net<0?`${other.name} doit ${fmt(-net)}j`:`Quitte ✓`;
+        rows += `<div class="balance-row"><span>${other.name}</span><b class="${cls}">${txt}</b></div>`;
+      }
+    });
+    if(!any) rows = `<div class="balance-row"><span style="color:#c7c7cc;font-size:11px">Aucun remplacement</span></div>`;
+    html += `<div class="balance-card">
+      <div class="balance-name" style="display:flex;align-items:center;gap:5px">
+        <div class="quota-avatar" style="background:${emp.bg};color:${emp.fg};width:18px;height:18px;font-size:8px">${emp.initials}</div>
+        ${emp.name}
+      </div>${rows}</div>`;
+  });
+  document.getElementById('balanceGrid').innerHTML = html;
+}
+
+// === INIT ===
+loadDataFast();
+</script>
+
+
+</body></html>
